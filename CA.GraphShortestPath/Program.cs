@@ -152,13 +152,10 @@ namespace CA.GraphShortestPath
             int currentMinIndex = 0;
             for (int i = 0; i < N; i++)
             {
-                if (!visited[i])
+                if ((!visited[i]) && (distances[i] < currentMin))
                 {
-                    if (distances[i] < currentMin)
-                    {
-                        currentMin = distances[i];
-                        currentMinIndex = i;
-                    }
+                    currentMin = distances[i];
+                    currentMinIndex = i;
                 }
             }
             return currentMinIndex;
