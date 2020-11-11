@@ -1,218 +1,158 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace CA.GraphShortestPath
 {
-    /// <summary>
-    /// Node to be used in Graph class
-    /// </summary>
-    /// <typeparam name="TLabel">Actual data in the node (e.g., int, string, other)</typeparam>
-    class Node<TLabel>
-    {
-        #region Fields and Properties
-        public int GraphIndex { get; set; }
-        public TLabel Label { get; set; }
-        public List<Node<TLabel>> Neighbors { get; set; }
-        public List<int> Weights { get; set; }
-        #endregion
-        public Node(TLabel label)
-        {
-            Label = label;
-            Neighbors = new List<Node<TLabel>>();
-            Weights = new List<int>();
-        }
-        public override string ToString()
-        {
-            return $"Node graph index: {GraphIndex}. " +
-                $"Label: {Label}. " +
-                $"#Neighbors: {Neighbors.Count}. " +
-                $"Weights: [{string.Join(", ", Weights)}]";
-        }
-
-    }
-
-    /// <summary>
-    /// Directed and weighted graph
-    /// </summary>
-    /// <typeparam name="TLabel">Actual data in the node (e.g., int, string, other)</typeparam>
-    class Graph<TLabel>
-    {
-        #region Fields and Properties
-        private List<Node<TLabel>> Nodes { get; set; }
-        #endregion
-
-        #region Constructor(s)
-        public Graph()
-        {
-            Nodes = new List<Node<TLabel>>();
-        }
-        #endregion
-
-        #region Building Process
-        public Node<TLabel> AddNode(TLabel label)
-        {
-            var node = new Node<TLabel>(label);
-            Nodes.Add(node);
-            UpdateIndexes();
-            return node;
-        }
-
-        private void UpdateIndexes()
-        {
-            int ind = 0;
-            foreach (var node in Nodes)
-            {
-                node.GraphIndex = ind++;
-            }
-        }
-
-        public void Connect(Node<TLabel> n1, Node<TLabel> n2, int weight)
-        {
-            n1.Neighbors.Add(n2);
-            n1.Weights.Add(weight);
-        }
-        #endregion
-
-        #region Shortest Path
-        public List<Node<TLabel>> ShortestPath(Node<TLabel> src, Node<TLabel> dst)
-        {
-            List<Node<TLabel>> srtPath = new List<Node<TLabel>>();
-
-            (int[] distances, int[] previous) = Dijsktra(src);
-
-            previous[src.GraphIndex] = -1;
-            BuildPath(srtPath, dst.GraphIndex, previous);
-            srtPath.Reverse();
-            return srtPath;
-        }
-
-        private void BuildPath(List<Node<TLabel>> srtPath, int i, int[] previous)
-        {
-            if (previous[i] == -1)
-            {
-                srtPath.Add(Nodes[i]);
-                return;
-            }
-            else
-            {
-                srtPath.Add(Nodes[i]);
-                BuildPath(srtPath, previous[i], previous);
-            }
-        }
-
-        public (int[], int[]) Dijsktra(Node<TLabel> src)
-        {
-            int N = Nodes.Count;
-            bool[] visited = new bool[N];
-            int[] distances = new int[N];
-            int[] previous = new int[N];
-
-            // Set all distances to "Inf" except src node to 0
-            for (int i = 0; i < N; i++)
-                distances[i] = int.MaxValue;
-
-            distances[src.GraphIndex] = 0;
-
-            Node<TLabel> node;
-            int neighborLocalIndex, newDist;
-            int index = src.GraphIndex;
-
-            while (visited.Any(x => x == false)) // At least 1 node to visit
-            {
-                // Visit a node and update all neighborhood
-                node = Nodes[index];
-                visited[index] = true;
-                foreach (var neighbor in node.Neighbors)
-                {
-                    if (!visited[neighbor.GraphIndex]) // Neighbor is not already visited
-                    {
-                        neighborLocalIndex = node.Neighbors.FindIndex(x => x == neighbor);
-                        newDist = distances[node.GraphIndex] + node.Weights[neighborLocalIndex];
-                        if (newDist < distances[neighbor.GraphIndex])
-                        {
-                            distances[neighbor.GraphIndex] = newDist;
-                            previous[neighbor.GraphIndex] = node.GraphIndex;
-                        }
-                    }
-
-                }
-                // Find next unvisited node index at minimum distance
-                index = PickNextNodeIndex(distances, visited);
-            }
-
-            return (distances, previous);
-
-        }
-
-        private int PickNextNodeIndex(int[] distances, bool[] visited)
-        {
-            int N = Nodes.Count;
-            int currentMin = int.MaxValue;
-            int currentMinIndex = 0;
-            for (int i = 0; i < N; i++)
-            {
-                if ((!visited[i]) && (distances[i] < currentMin))
-                {
-                    currentMin = distances[i];
-                    currentMinIndex = i;
-                }
-            }
-            return currentMinIndex;
-        }
-        #endregion
-
-        #region Utils
-        public override string ToString()
-        {
-            return $"Directed and weighted graph with {Nodes.Count} nodes.";
-        }
-        #endregion
-
-    }
 
     class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("::: SHORTEST PATH (Dijsktra) :::\n\r");
+            Console.WriteLine("::: SHORTEST PATH :::\n\r");
 
             // Build the graph
-            var g = new Graph<string>();
-
-            var n1 = g.AddNode("A");
-            var n2 = g.AddNode("B");
-            var n3 = g.AddNode("C");
-            var n4 = g.AddNode("D");
-            var n5 = g.AddNode("E");
-
-            g.Connect(n1, n2, 10);
-            g.Connect(n1, n4, 5);
-
-            g.Connect(n2, n1, 1);
-            g.Connect(n2, n3, 1);
-            g.Connect(n2, n4, 2);
-
-            g.Connect(n3, n2, 1);
-            g.Connect(n3, n5, 4);
-
-            g.Connect(n4, n2, 3);
-            g.Connect(n4, n3, 9);
-            g.Connect(n4, n5, 2);
-
-            g.Connect(n5, n1, 15);
-            g.Connect(n5, n3, 6);
+            var g = LoadGraph01();
 
             // Calculate the shortest path between two nodes
-            var srtPath = g.ShortestPath(n5, n1);
+            int n1Index = 0;
+            int n2Index = 2;
+            (var srtPath, var distances, var previous, bool cycle)
+                = g.ShortestPath(g.Nodes[n1Index], g.Nodes[n2Index]);
 
             // Output the result in console
-            Console.WriteLine($"Shortest Path from ({srtPath[0].Label}) to ({srtPath.Last().Label}): ");
+            if (cycle)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Warning: Graph has negative weight cycles, " +
+                    "so the illustrated path is infinite...and result is wrong.");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }    
+
+            Console.Write($"Shortest Path " +
+                $"from ({g.Nodes[n1Index].Label}) " +
+                $"to ({g.Nodes[n2Index].Label}):\t");
+
             for (int i = 0; i < srtPath.Count - 1; i++)
                 Console.Write($"{srtPath[i].Label} -> ");
             
-            Console.Write($"{srtPath.Last().Label}");
+            Console.WriteLine($"{srtPath.Last().Label}\n\r");
+
+            Console.WriteLine("Distances: \t\t\t[{0}]\n\r", string.Join(", ", distances));
+            Console.WriteLine("Previous (-1 is source): \t[{0}]", string.Join(", ", previous));
 
         }
+
+        static Graph<string> LoadGraph01()
+        {
+            // Directed and weighted graph
+            // No edges with negative weights
+            // No negative cycles
+            // Dijsktra will report a correct shortest path
+            var g = new Graph<string>();
+
+            var nA = g.AddNode("A");
+            var nB = g.AddNode("B");
+            var nC = g.AddNode("C");
+            var nD = g.AddNode("D");
+            var nE = g.AddNode("E");
+
+            g.Connect(nA, nB, 10);
+            g.Connect(nA, nD, 5);
+
+            g.Connect(nB, nA, 1);
+            g.Connect(nB, nC, 1);
+            g.Connect(nB, nD, 2);
+
+            g.Connect(nC, nB, 1);
+            g.Connect(nC, nE, 4);
+
+            g.Connect(nD, nB, 3);
+            g.Connect(nD, nC, 9);
+            g.Connect(nD, nE, 2);
+
+            g.Connect(nE, nA, 15);
+            g.Connect(nE, nC, 6);
+
+            return g;
+        }
+
+        static Graph<string> LoadGraph02()
+        {
+            // Directed and weighted graph
+            // Has edges with negative weights
+            // Has negative cycles
+            // Bellmann-Ford won't report a correct shortest path
+            var g = new Graph<string>();
+
+            var nA = g.AddNode("A");
+            var nB = g.AddNode("B");
+            var nC = g.AddNode("C");
+            var nD = g.AddNode("D");
+            var nE = g.AddNode("E");
+            var nF = g.AddNode("F");
+
+            g.Connect(nA, nB, 2);
+            g.Connect(nB, nC, 2);
+            g.Connect(nC, nD, 2);
+
+            
+            g.Connect(nD, nE, 2);
+            g.Connect(nD, nF, -3);
+
+            g.Connect(nF, nC, -3);
+
+            return g;
+        }
+
+        static Graph<string> LoadGraph03()
+        {
+            // Directed and weighted graph
+            // Has edges with negative weights
+            // Has negative cycles
+            // Bellmann-Ford won't report a correct shortest path
+            var g = new Graph<string>();
+
+            var nA = g.AddNode("A");
+            var nB = g.AddNode("B");
+            var nC = g.AddNode("C");
+            var nD = g.AddNode("D");
+            var nE = g.AddNode("E");
+            var nF = g.AddNode("F");
+            var nG = g.AddNode("G");
+
+            g.Connect(nA, nB, 1); g.Connect(nA, nC, 1);
+            g.Connect(nB, nD, 4);
+            g.Connect(nC, nB, 1);
+            g.Connect(nD, nC, -6); g.Connect(nD, nE, 1); g.Connect(nD, nF, 1);
+            g.Connect(nE, nF, 1); g.Connect(nE, nG, 1);
+            g.Connect(nF, nG, 1);
+
+            return g;
+        }
+
+        static Graph<string> LoadGraph04()
+        {
+            // Directed and weighted graph
+            // Has edges with negative weights
+            // No negative cycles
+            // Bellmann-Ford will report a correct shortest path
+            var g = new Graph<string>();
+
+            var nA = g.AddNode("A");
+            var nB = g.AddNode("B");
+            var nC = g.AddNode("C");
+            var nD = g.AddNode("D");
+            var nE = g.AddNode("E");
+
+            g.Connect(nA, nB, -1); g.Connect(nA, nC, 4);
+            g.Connect(nB, nC, 3); g.Connect(nB, nD, 2); g.Connect(nB, nE, 2);
+            g.Connect(nD, nB, 1); g.Connect(nD, nC, 5);
+            g.Connect(nE, nD, -3);
+
+            return g;
+        }
+
     }
+
+    
 }
